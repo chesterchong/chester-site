@@ -74,15 +74,15 @@ export default function Header({ className }) {
             {showArrow && <CurvedArrow className="hidden lg:block absolute -top-10 -right-28" />}
             <button
               onClick={openCommandPalette}
-              className="hidden sm:flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 px-2 py-1 rounded-lg border border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 hover:border-stone-300 dark:hover:border-stone-600 transition-colors duration-200"
+              className="hidden sm:flex items-center gap-1 text-xs text-stone-600 dark:text-stone-400 bg-white/25 dark:bg-white/[0.06] backdrop-blur-[2px] px-2 py-1 rounded-lg border border-stone-500/50 dark:border-stone-600/60 hover:bg-white/40 dark:hover:bg-white/10 transition-colors duration-200"
             >
               <span className={`flex items-center ${isModifierPressed ? 'opacity-0' : 'opacity-100'}`}>
-                <kbd className="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-700 font-mono">
+                <kbd className="px-1.5 py-0.5 rounded bg-white/30 dark:bg-white/10 font-mono">
                   {isMac ? '⌘' : 'ctrl'}
                 </kbd>
                 <span>+</span>
               </span>
-              <kbd className="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-700 font-mono">
+              <kbd className="px-1.5 py-0.5 rounded bg-white/30 dark:bg-white/10 font-mono">
                 K
               </kbd>
             </button>
