@@ -65,8 +65,11 @@ export default function About() {
                 ↳
               </span>
               <span className="text-stone-600 dark:text-stone-400">
-                {/* TODO(Chester): a highlight, e.g. built <Link href="...">something</Link> that did X */}
-                [something cool you built]
+                built an{" "}
+                <span className="font-medium text-stone-800 dark:text-stone-200">
+                  AI wrapper for quizzes
+                </span>{" "}
+                from scratch in &lt; 2 days
               </span>
             </li>
           </ul>
