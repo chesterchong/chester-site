@@ -27,13 +27,13 @@ function Shortcut({ isModifierPressed, children }) {
     <div className="flex text-xs items-center gap-1 ml-auto text-stone-500 dark:text-stone-500">
       {!isModifierPressed && (
         <>
-          <kbd className="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800 font-mono text-stone-600 dark:text-stone-400">
+          <kbd className="px-1.5 py-0.5 rounded bg-white/40 dark:bg-white/10 font-mono text-stone-600 dark:text-stone-400">
             shift
           </kbd>
           <span>+</span>
         </>
       )}
-      <kbd className="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800 font-mono text-stone-600 dark:text-stone-400">
+      <kbd className="px-1.5 py-0.5 rounded bg-white/40 dark:bg-white/10 font-mono text-stone-600 dark:text-stone-400">
         {children}
       </kbd>
     </div>
@@ -196,11 +196,11 @@ export default function CommandPalette() {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 animate-fade-in z-40" />
+        <Dialog.Overlay className="fixed inset-0 bg-black/25 animate-fade-in z-40" />
         <Dialog.Content className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-[500px] p-3 animate-slide-down z-50">
           <Dialog.Title className="sr-only">Command Palette</Dialog.Title>
           <Command
-            className="w-full rounded-xl border border-stone-300 dark:border-stone-900 bg-white dark:bg-neutral-900 shadow-2xl overflow-hidden"
+            className="w-full rounded-xl border border-stone-400/40 dark:border-stone-600/40 bg-white/60 dark:bg-neutral-900/55 backdrop-blur-xl shadow-2xl overflow-hidden"
             loop={true}
             shouldFilter={true}
             onClick={(e) => {
@@ -212,8 +212,8 @@ export default function CommandPalette() {
             }}
           >
             {currentSection && (
-              <div className="px-5 py-6 border-b border-stone-200 dark:border-stone-700 flex items-center gap-3">
-                <div className="p-1.5 bg-stone-100 dark:bg-stone-800 rounded-lg text-stone-600 dark:text-stone-400">
+              <div className="px-5 py-6 border-b border-stone-400/30 dark:border-stone-600/40 flex items-center gap-3">
+                <div className="p-1.5 bg-white/40 dark:bg-white/10 rounded-lg text-stone-600 dark:text-stone-400">
                   {currentSection.icon}
                 </div>
                 <div className="flex-1">
@@ -227,7 +227,7 @@ export default function CommandPalette() {
               </div>
             )}
 
-            <div className="flex items-center border-b border-stone-300 dark:border-stone-700 px-4 py-4">
+            <div className="flex items-center border-b border-stone-400/30 dark:border-stone-600/40 px-4 py-4">
               <Search className="h-4 w-4 text-stone-500 dark:text-stone-400" />
               <Command.Input
                 placeholder="Search for actions..."
@@ -256,7 +256,7 @@ export default function CommandPalette() {
                 <Command.Item
                   value="home"
                   onSelect={() => runCommand(() => router.push("/"))}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer data-[selected=true]:bg-stone-100 dark:data-[selected=true]:bg-stone-800"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-500/10 dark:hover:bg-white/10 cursor-pointer data-[selected=true]:bg-stone-500/10 dark:data-[selected=true]:bg-white/10"
                 >
                   <Home className="h-4 w-4" />
                   <span className="flex-1">Go to Home</span>
@@ -265,7 +265,7 @@ export default function CommandPalette() {
                 <Command.Item
                   value="projects"
                   onSelect={() => runCommand(() => router.push("/projects"))}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer data-[selected=true]:bg-stone-100 dark:data-[selected=true]:bg-stone-800"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-500/10 dark:hover:bg-white/10 cursor-pointer data-[selected=true]:bg-stone-500/10 dark:data-[selected=true]:bg-white/10"
                 >
                   <FolderGit2 className="h-4 w-4" />
                   <span className="flex-1">Go to Projects</span>
@@ -274,7 +274,7 @@ export default function CommandPalette() {
                 <Command.Item
                   value="writing"
                   onSelect={() => runCommand(() => router.push("/writing"))}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer data-[selected=true]:bg-stone-100 dark:data-[selected=true]:bg-stone-800"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-500/10 dark:hover:bg-white/10 cursor-pointer data-[selected=true]:bg-stone-500/10 dark:data-[selected=true]:bg-white/10"
                 >
                   <PenLine className="h-4 w-4" />
                   <span className="flex-1">Go to Writing</span>
@@ -293,7 +293,7 @@ export default function CommandPalette() {
                       window.open("https://x.com/cheetah1118", "_blank")
                     )
                   }
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer data-[selected=true]:bg-stone-100 dark:data-[selected=true]:bg-stone-800"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-500/10 dark:hover:bg-white/10 cursor-pointer data-[selected=true]:bg-stone-500/10 dark:data-[selected=true]:bg-white/10"
                 >
                   <Twitter className="h-4 w-4" />
                   <span className="flex-1">X Profile</span>
@@ -309,7 +309,7 @@ export default function CommandPalette() {
                       )
                     )
                   }
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer data-[selected=true]:bg-stone-100 dark:data-[selected=true]:bg-stone-800"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-500/10 dark:hover:bg-white/10 cursor-pointer data-[selected=true]:bg-stone-500/10 dark:data-[selected=true]:bg-white/10"
                 >
                   <Linkedin className="h-4 w-4" />
                   <span className="flex-1">LinkedIn Profile</span>
@@ -322,7 +322,7 @@ export default function CommandPalette() {
                       window.open("https://github.com/chesterchong", "_blank")
                     )
                   }
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer data-[selected=true]:bg-stone-100 dark:data-[selected=true]:bg-stone-800"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-500/10 dark:hover:bg-white/10 cursor-pointer data-[selected=true]:bg-stone-500/10 dark:data-[selected=true]:bg-white/10"
                 >
                   <Github className="h-4 w-4" />
                   <span className="flex-1">GitHub Profile</span>
@@ -335,7 +335,7 @@ export default function CommandPalette() {
                       window.open("mailto:chester.chong@polymarket.com", "_blank")
                     )
                   }
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer data-[selected=true]:bg-stone-100 dark:data-[selected=true]:bg-stone-800"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-500/10 dark:hover:bg-white/10 cursor-pointer data-[selected=true]:bg-stone-500/10 dark:data-[selected=true]:bg-white/10"
                 >
                   <Mail className="h-4 w-4" />
                   <span className="flex-1">Email</span>
@@ -350,7 +350,7 @@ export default function CommandPalette() {
                 <Command.Item
                   value="toggle theme dark mode light mode"
                   onSelect={() => runCommand(() => toggleTheme())}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer data-[selected=true]:bg-stone-100 dark:data-[selected=true]:bg-stone-800"
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-500/10 dark:hover:bg-white/10 cursor-pointer data-[selected=true]:bg-stone-500/10 dark:data-[selected=true]:bg-white/10"
                 >
                   {theme === "dark" ? (
                     <Sun className="h-4 w-4" />
@@ -364,19 +364,19 @@ export default function CommandPalette() {
                 </Command.Item>
               </Command.Group>
             </Command.List>
-            <div className="border-t border-stone-200 dark:border-stone-700 px-3 py-4">
+            <div className="border-t border-stone-400/30 dark:border-stone-600/40 px-3 py-4">
               <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 text-xs">
                 <div className="flex items-center gap-2">
                   <Lightbulb className="h-3 w-3" />
                   <span>Type</span>
-                  <kbd className="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800 font-mono text-stone-600 dark:text-stone-400">
+                  <kbd className="px-1.5 py-0.5 rounded bg-white/40 dark:bg-white/10 font-mono text-stone-600 dark:text-stone-400">
                     ↵
                   </kbd>
                   <span>to select</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span>Press</span>
-                  <kbd className="px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800 font-mono text-stone-600 dark:text-stone-400">
+                  <kbd className="px-1.5 py-0.5 rounded bg-white/40 dark:bg-white/10 font-mono text-stone-600 dark:text-stone-400">
                     esc
                   </kbd>
                   <span>to close</span>
