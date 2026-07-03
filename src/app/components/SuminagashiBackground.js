@@ -373,7 +373,7 @@ function createSim(mount) {
   }
 
   function dropInk(x, y, hex, strength) {
-    splatDye(x, y, inkAbsorption(hex, strength * 0.18), 1.0);
+    splatDye(x, y, inkAbsorption(hex, strength * 0.18), 1.5);
     const angle = Math.random() * Math.PI * 2;
     const speed = 60 + Math.random() * 80;
     splatVelocity(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, 1.2);
@@ -425,13 +425,13 @@ function createSim(mount) {
     if (idle && nextDrop <= 0) {
       const x = 0.14 + Math.random() * 0.72;
       const y = 0.16 + Math.random() * 0.68;
-      dropInk(x, y, randomInk(), 0.8 + Math.random() * 0.7);
-      if (Math.random() < 0.3) {
+      dropInk(x, y, randomInk(), 1.0 + Math.random() * 0.8);
+      if (Math.random() < 0.5) {
         const x2 = Math.min(Math.max(x + (Math.random() - 0.5) * 0.16, 0.08), 0.92);
         const y2 = Math.min(Math.max(y + (Math.random() - 0.5) * 0.16, 0.08), 0.92);
-        setTimeout(() => dropInk(x2, y2, randomInk(), 0.5 + Math.random() * 0.4), 220 + Math.random() * 300);
+        setTimeout(() => dropInk(x2, y2, randomInk(), 0.6 + Math.random() * 0.5), 220 + Math.random() * 300);
       }
-      nextDrop = (reducedMotion ? 6500 : 2600) + Math.random() * 2600;
+      nextDrop = (reducedMotion ? 5000 : 1100) + Math.random() * 1400;
     }
 
     nextStir -= dt * 1000;
