@@ -48,7 +48,7 @@ export default function About() {
                 height={14}
                 className="object-contain relative top-[2px]"
               />
-              <Link href="https://www.tarumt.edu.my" className="font-medium">
+              <Link href="https://www.tarc.edu.my/" className="font-medium">
                 TARUMT
               </Link>
             </span>
