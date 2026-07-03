@@ -347,6 +347,45 @@ function createSim(mount) {
     }
   );
 
+  // stamp an image into the dye field as absorbance — it appears on the
+  // water and then melts into the surrounding ink like everything else
+  const stampMat = prog(
+    /* glsl */ `
+    precision highp float;
+    varying vec2 vUv;
+    uniform sampler2D uTarget, uStamp;
+    uniform vec2 uCenter, uSize;
+    uniform float uDark, uStrength;
+    void main(){
+      vec3 base = texture2D(uTarget, vUv).rgb;
+      vec2 luv = (vUv - uCenter) / uSize + 0.5;
+      vec3 A = vec3(0.0);
+      float m = 0.0;
+      if (luv.x > 0.0 && luv.x < 1.0 && luv.y > 0.0 && luv.y < 1.0) {
+        vec4 s = texture2D(uStamp, luv);
+        vec3 c = clamp(s.rgb, 0.0, 1.0);
+        vec3 e = vec3(0.012);
+        vec3 Alight = -log(max(c, e));
+        vec3 Adark  = -log(max(vec3(1.0) - c * 0.94, e));
+        A = mix(Alight, Adark, uDark) * uStrength;
+        m = s.a;
+      }
+      // replace the dye under the sprite while held: the image stays a
+      // crisp "sticker" (white pixels wipe to clean paper) while its
+      // advected copies bleed and marble outside; on release it melts whole
+      gl_FragColor = vec4(mix(base, A, m), 1.0);
+    }
+  `,
+    {
+      uTarget: { value: null },
+      uStamp: { value: null },
+      uCenter: { value: new THREE.Vector2() },
+      uSize: { value: new THREE.Vector2() },
+      uDark: { value: dark ? 1 : 0 },
+      uStrength: { value: 0.7 },
+    }
+  );
+
   function blit(mat, target) {
     quad.material = mat;
     renderer.setRenderTarget(target);
@@ -377,6 +416,59 @@ function createSim(mount) {
     const angle = Math.random() * Math.PI * 2;
     const speed = 60 + Math.random() * 80;
     splatVelocity(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, 1.2);
+  }
+
+  /* meme stamps: drop the images in public/memes/ and list them here.
+     Animated GIFs work but only their first frame is stamped. The image is
+     held in the dye for a few seconds (edges marbling the whole time),
+     then released to melt into the surrounding ink. */
+  const MEMES = ["/memes/pixel-cat.png", "/memes/pixel-ghost.png", "/memes/pixel-coin.png"];
+  const MEME_HOLD_MS = 7000;
+  let holdStamp = null;
+
+  function applyStamp(s) {
+    stampMat.uniforms.uTarget.value = dye.read.texture;
+    stampMat.uniforms.uStamp.value = s.tex;
+    stampMat.uniforms.uCenter.value.set(s.cx, s.cy);
+    stampMat.uniforms.uSize.value.set(
+      s.h * s.aspect * (innerHeight / innerWidth),
+      s.h
+    );
+    stampMat.uniforms.uDark.value = dark ? 1 : 0;
+    blit(stampMat, dye.write);
+    dye.swap();
+  }
+
+  function stampRandomMeme() {
+    const src = MEMES[Math.floor(Math.random() * MEMES.length)];
+    const img = new Image();
+    img.onload = () => {
+      const tex = new THREE.Texture(img);
+      tex.magFilter = THREE.NearestFilter; // keep pixel art crisp
+      tex.minFilter = THREE.NearestFilter;
+      tex.generateMipmaps = false;
+      tex.needsUpdate = true;
+      if (holdStamp) holdStamp.tex.dispose();
+      holdStamp = {
+        tex,
+        cx: 0.25 + Math.random() * 0.5,
+        cy: 0.3 + Math.random() * 0.4,
+        h: 0.2 + Math.random() * 0.12,
+        aspect: img.width / img.height,
+        until: performance.now() + MEME_HOLD_MS,
+      };
+    };
+    img.src = src;
+  }
+
+  function updateStamp(now) {
+    if (!holdStamp) return;
+    if (now < holdStamp.until) {
+      applyStamp(holdStamp);
+    } else {
+      holdStamp.tex.dispose();
+      holdStamp = null;
+    }
   }
   function randomInk() {
     return palette.inks[Math.floor(Math.random() * palette.inks.length)];
@@ -414,12 +506,19 @@ function createSim(mount) {
     splatVelocity(pointer.x, pointer.y, dx * CONFIG.SPLAT_FORCE, dy * CONFIG.SPLAT_FORCE, 1.4);
   }
 
-  /* auto: periodic drops and a slow circulating current */
+  /* auto: periodic drops, a slow circulating current, and a meme a minute */
   let lastInteraction = 0;
   let nextDrop = 1200;
   let nextStir = 2600;
+  let nextMeme = 12000;
   function autoUpdate(now, dt) {
     const idle = now - lastInteraction > 3000;
+
+    nextMeme -= dt * 1000;
+    if (nextMeme <= 0) {
+      stampRandomMeme();
+      nextMeme = 60000;
+    }
 
     nextDrop -= dt * 1000;
     if (idle && nextDrop <= 0) {
@@ -513,6 +612,7 @@ function createSim(mount) {
     applyPointer();
     autoUpdate(now, dt);
     step(dt);
+    updateStamp(now);
 
     displayMat.uniforms.uDye.value = dye.read.texture;
     blit(displayMat, null);
@@ -564,6 +664,12 @@ function createSim(mount) {
   seed();
   raf = requestAnimationFrame(frame);
 
+  // manual trigger for tinkering: window.__sumi.stampRandomMeme()
+  window.__sumi = {
+    stampRandomMeme,
+    holdActive: () => !!holdStamp,
+  };
+
   return {
     setDark(isDark) {
       if (isDark === dark) return;
@@ -579,6 +685,7 @@ function createSim(mount) {
     dispose() {
       cancelAnimationFrame(raf);
       clearTimeout(resizeTimer);
+      if (holdStamp) holdStamp.tex.dispose();
       removeEventListener("pointermove", onPointerMove);
       removeEventListener("pointerdown", onPointerDown);
       removeEventListener("resize", onResize);
@@ -586,7 +693,7 @@ function createSim(mount) {
       curlRT.dispose();
       divergeRT.dispose();
       quad.geometry.dispose();
-      [advectMat, splatMat, curlMat, vorticityMat, divergeMat, pressureMat, gradientMat, clearMat, displayMat].forEach(
+      [advectMat, splatMat, stampMat, curlMat, vorticityMat, divergeMat, pressureMat, gradientMat, clearMat, displayMat].forEach(
         (m) => m.dispose()
       );
       renderer.dispose();
