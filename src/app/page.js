@@ -143,7 +143,7 @@ export default function About() {
 
       <NextLink
         href="/projects"
-        className="text-center mt-4 py-4 px-6 rounded-lg border border-stone-400 dark:border-stone-600 bg-stone-50 dark:bg-stone-900 text-stone-600 dark:text-stone-400 transform transition-all duration-300 font-extralight hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+        className="text-center mt-4 py-4 px-6 rounded-lg border border-stone-500/50 dark:border-stone-600/60 bg-white/25 dark:bg-white/[0.06] backdrop-blur-[2px] text-stone-700 dark:text-stone-300 transform transition-all duration-300 font-extralight hover:scale-[1.02] hover:bg-white/40 dark:hover:bg-white/10 active:scale-[0.98]"
       >
         see what i&apos;ve built{" "}
         <GalleryHorizontalEnd className="size-5 inline align-top ml-1 transition-transform group-hover:rotate-3" />
