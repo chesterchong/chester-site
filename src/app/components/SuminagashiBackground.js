@@ -422,9 +422,52 @@ function createSim(mount) {
      Animated GIFs work but only their first frame is stamped. The image is
      held in the dye for a few seconds (edges marbling the whole time),
      then released to melt into the surrounding ink. */
-  const MEMES = ["/memes/pixel-cat.png", "/memes/pixel-ghost.png", "/memes/pixel-coin.png"];
+  const MEMES = [
+    "/memes/pixel-cat.png",
+    "/memes/pixel-ghost.png",
+    "/memes/pixel-coin.png",
+    "/memes/salary-cat.gif", // 月薪喵
+  ];
   const MEME_HOLD_MS = 7000;
   let holdStamp = null;
+
+  // memes usually sit on a solid white card: flood-fill from the borders
+  // and knock out only the white connected to the edge, so whites inside
+  // the artwork (enclosed by outlines) survive
+  function keyOutWhiteBg(img) {
+    const c = document.createElement("canvas");
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0);
+    const d = ctx.getImageData(0, 0, c.width, c.height);
+    const { data } = d;
+    const w = c.width;
+    const h = c.height;
+    const removable = (i) =>
+      data[i + 3] < 10 ||
+      (data[i] > 240 && data[i + 1] > 240 && data[i + 2] > 240);
+    const seen = new Uint8Array(w * h);
+    const stack = [];
+    for (let x = 0; x < w; x++) stack.push(x, x + (h - 1) * w);
+    for (let y = 0; y < h; y++) stack.push(y * w, y * w + w - 1);
+    while (stack.length) {
+      const p = stack.pop();
+      if (seen[p]) continue;
+      seen[p] = 1;
+      const i = p * 4;
+      if (!removable(i)) continue;
+      data[i + 3] = 0;
+      const x = p % w;
+      const y = (p / w) | 0;
+      if (x > 0) stack.push(p - 1);
+      if (x < w - 1) stack.push(p + 1);
+      if (y > 0) stack.push(p - w);
+      if (y < h - 1) stack.push(p + w);
+    }
+    ctx.putImageData(d, 0, 0);
+    return c;
+  }
 
   function applyStamp(s) {
     stampMat.uniforms.uTarget.value = dye.read.texture;
@@ -439,13 +482,14 @@ function createSim(mount) {
     dye.swap();
   }
 
-  function stampRandomMeme() {
-    const src = MEMES[Math.floor(Math.random() * MEMES.length)];
+  function stampRandomMeme(srcOverride) {
+    const src = srcOverride || MEMES[Math.floor(Math.random() * MEMES.length)];
     const img = new Image();
     img.onload = () => {
-      const tex = new THREE.Texture(img);
-      tex.magFilter = THREE.NearestFilter; // keep pixel art crisp
-      tex.minFilter = THREE.NearestFilter;
+      const tex = new THREE.CanvasTexture(keyOutWhiteBg(img));
+      const pixelArt = img.naturalWidth <= 64;
+      tex.magFilter = pixelArt ? THREE.NearestFilter : THREE.LinearFilter;
+      tex.minFilter = THREE.LinearFilter;
       tex.generateMipmaps = false;
       tex.needsUpdate = true;
       if (holdStamp) holdStamp.tex.dispose();
@@ -664,10 +708,18 @@ function createSim(mount) {
   seed();
   raf = requestAnimationFrame(frame);
 
-  // manual trigger for tinkering: window.__sumi.stampRandomMeme()
+  // manual triggers for tinkering: window.__sumi.stampRandomMeme()
   window.__sumi = {
     stampRandomMeme,
     holdActive: () => !!holdStamp,
+    // drive n frames manually (e.g. when rAF is suspended in hidden tabs)
+    tick(n = 60) {
+      for (let i = 0; i < n; i++) {
+        cancelAnimationFrame(raf);
+        lastT -= 1000 / 60;
+        frame(performance.now());
+      }
+    },
   };
 
   return {
