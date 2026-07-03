@@ -1,0 +1,18 @@
+import MdxLayout from "@/app/layouts/MdxLayout";
+
+# Hello, World
+
+This is a starter post so the writing section isn't empty. To add a post,
+create a folder under `src/app/writing/` with a `page.mdx` like this one —
+the folder name becomes the URL slug.
+
+export const meta = {
+  title: "Hello, World",
+  date: "07-04-2026",
+  tags: ["meta"],
+  description: "First post on the new site.",
+};
+
+export default function MDXPage({ children }) {
+  return <MdxLayout>{children}</MdxLayout>;
+}
