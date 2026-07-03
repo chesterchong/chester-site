@@ -28,7 +28,7 @@ export default function RootLayout({ children }) {
         <SpeedInsights />
         <ThemeProvider>
           <SuminagashiBackground />
-          <main className="flex justify-center font-extralight min-h-screen selection:bg-yellow-200 dark:selection:bg-yellow-800">
+          <main className="flex justify-center font-extralight min-h-screen selection:bg-transparent">
             <div className="flex flex-col gap-4 w-full md:max-w-[500px] m-6 md:m-20 text-neutral-500 dark:text-neutral-400 md:mt-[60px]">
               <Header />
               {children}
