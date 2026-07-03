@@ -524,14 +524,40 @@ function createSim(mount) {
     setTimeout(() => dropInk(0.5, 0.62, palette.inks[2], 0.5), 950);
   }
 
-  function onResize() {
+  // Resize a double-FBO without losing its contents: render the old texture
+  // into freshly allocated targets (three.js setSize would wipe them).
+  function resizePreserving(fbo, nw, nh) {
+    const newRead = makeRT(nw, nh);
+    clearMat.uniforms.uTexture.value = fbo.read.texture;
+    clearMat.uniforms.uValue.value = 1.0;
+    blit(clearMat, newRead);
+    fbo.read.dispose();
+    fbo.write.dispose();
+    fbo.read = newRead;
+    fbo.write = makeRT(nw, nh);
+    fbo.texel.set(1 / nw, 1 / nh);
+  }
+
+  // Mobile browsers fire resize while scrolling (URL bar collapse/expand);
+  // debounce, skip no-ops, and preserve the ink across real resizes.
+  let lastW = innerWidth;
+  let lastH = innerHeight;
+  let resizeTimer = 0;
+  function applyResize() {
+    if (innerWidth === lastW && innerHeight === lastH) return;
+    lastW = innerWidth;
+    lastH = innerHeight;
     renderer.setSize(innerWidth, innerHeight);
     S = simSizes();
-    velocity.resize(S.sw, S.sh);
-    pressure.resize(S.sw, S.sh);
+    resizePreserving(velocity, S.sw, S.sh);
+    resizePreserving(pressure, S.sw, S.sh);
+    resizePreserving(dye, S.dw, S.dh);
     curlRT.setSize(S.sw, S.sh);
     divergeRT.setSize(S.sw, S.sh);
-    dye.resize(S.dw, S.dh);
+  }
+  function onResize() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(applyResize, 200);
   }
   addEventListener("resize", onResize);
 
@@ -552,6 +578,7 @@ function createSim(mount) {
     },
     dispose() {
       cancelAnimationFrame(raf);
+      clearTimeout(resizeTimer);
       removeEventListener("pointermove", onPointerMove);
       removeEventListener("pointerdown", onPointerDown);
       removeEventListener("resize", onResize);
