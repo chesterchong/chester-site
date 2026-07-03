@@ -65,14 +65,14 @@ export default function About() {
                 ↳
               </span>
               <span className="text-stone-600 dark:text-stone-400">
-                built an AI{" "}
+                built an{" "}
                 <Link
                   href="https://gamify-ai-learn.vercel.app/"
                   className="font-medium"
                 >
-                  wrapper
+                  AI wrapper
                 </Link>{" "}
-                for quizzes from scratch in &lt; 2 days
+                for quizzes from scratch in &lt; 1 day
               </span>
             </li>
           </ul>
