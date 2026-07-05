@@ -31,12 +31,16 @@ import {
   Rainbow,
   CloudRain,
   Shuffle,
+  PartyPopper,
+  MoonStar,
 } from "lucide-react";
 
 // ink choreography modes for the fluid background
 const BACKGROUND_EFFECTS = [
   { id: "suminagashi", name: "Suminagashi (墨流し)", icon: Droplets },
   { id: "aurora", name: "Aurora", icon: Sparkles },
+  { id: "hanabi", name: "Hanabi 花火 (Fireworks)", icon: PartyPopper },
+  { id: "starry", name: "Starry Night", icon: MoonStar },
   { id: "meteor", name: "Meteor", icon: Star },
   { id: "ocean", name: "Ocean Wave", icon: Waves },
   { id: "cloud", name: "Cloud", icon: Cloud },
