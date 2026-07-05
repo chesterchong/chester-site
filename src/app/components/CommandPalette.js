@@ -18,7 +18,37 @@ import {
   Lightbulb,
   Sun,
   Moon,
+  Droplets,
+  Sparkles,
+  Star,
+  Waves,
+  Cloud,
+  Flame,
+  Orbit,
+  CircleDot,
+  Wind,
+  Palette,
+  Rainbow,
+  CloudRain,
+  Shuffle,
 } from "lucide-react";
+
+// ink choreography modes for the fluid background
+const BACKGROUND_EFFECTS = [
+  { id: "suminagashi", name: "Suminagashi (墨流し)", icon: Droplets },
+  { id: "aurora", name: "Aurora", icon: Sparkles },
+  { id: "meteor", name: "Meteor", icon: Star },
+  { id: "ocean", name: "Ocean Wave", icon: Waves },
+  { id: "cloud", name: "Cloud", icon: Cloud },
+  { id: "fire", name: "Fire", icon: Flame },
+  { id: "galaxy", name: "Galaxy Spiral", icon: Orbit },
+  { id: "ripple", name: "Ripple", icon: CircleDot },
+  { id: "breathing", name: "Breathing", icon: Wind },
+  { id: "rainbowCycle", name: "Rainbow Cycle", icon: Palette },
+  { id: "rainbowWave", name: "Rainbow Wave", icon: Rainbow },
+  { id: "rain", name: "Rain", icon: CloudRain },
+  { id: "random", name: "Random (auto-rotate)", icon: Shuffle },
+];
 import useMobileDevice from "../hooks/useMobileDevice";
 import { useTheme } from "./ThemeProvider";
 
@@ -341,6 +371,29 @@ export default function CommandPalette() {
                   <span className="flex-1">Email</span>
                   <Shortcut isModifierPressed={isModifierPressed}>E</Shortcut>
                 </Command.Item>
+              </Command.Group>
+
+              <Command.Group
+                heading="Background"
+                className="px-2 text-stone-500 dark:text-stone-400"
+              >
+                {BACKGROUND_EFFECTS.map((fx) => (
+                  <Command.Item
+                    key={fx.id}
+                    value={`background effect ${fx.name}`}
+                    onSelect={() =>
+                      runCommand(() =>
+                        window.dispatchEvent(
+                          new CustomEvent("set-bg-effect", { detail: fx.id })
+                        )
+                      )
+                    }
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-500/10 dark:hover:bg-white/10 cursor-pointer data-[selected=true]:bg-stone-500/10 dark:data-[selected=true]:bg-white/10"
+                  >
+                    <fx.icon className="h-4 w-4" />
+                    <span className="flex-1">{fx.name}</span>
+                  </Command.Item>
+                ))}
               </Command.Group>
 
               <Command.Group

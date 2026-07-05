@@ -414,40 +414,304 @@ function createSim(mount) {
     splatVelocity(pointer.x, pointer.y, dx * CONFIG.SPLAT_FORCE, dy * CONFIG.SPLAT_FORCE, 1.4);
   }
 
-  /* auto: periodic drops and a slow circulating current */
+  /* ── effect engine ──
+     each mode is a choreography: a per-frame pattern of dye + velocity
+     splats layered on the same fluid core, so every effect melts and
+     marbles like ink. Modes are switched via the ⌘K palette (a
+     "set-bg-effect" window event) and persisted to localStorage. */
   let lastInteraction = 0;
-  let nextDrop = 1200;
-  let nextStir = 2600;
-  function autoUpdate(now, dt) {
-    const idle = now - lastInteraction > 3000;
 
-    nextDrop -= dt * 1000;
-    if (idle && nextDrop <= 0) {
-      const x = 0.14 + Math.random() * 0.72;
-      const y = 0.16 + Math.random() * 0.68;
-      dropInk(x, y, randomInk(), 1.0 + Math.random() * 0.8);
-      if (Math.random() < 0.5) {
-        const x2 = Math.min(Math.max(x + (Math.random() - 0.5) * 0.16, 0.08), 0.92);
-        const y2 = Math.min(Math.max(y + (Math.random() - 0.5) * 0.16, 0.08), 0.92);
-        setTimeout(() => dropInk(x2, y2, randomInk(), 0.6 + Math.random() * 0.5), 220 + Math.random() * 300);
+  // per-effect fluid feel: how fast dye fades / how tight the vortices curl
+  const EFFECT_PARAMS = {
+    suminagashi: { dye: 0.035, curl: 24 },
+    aurora: { dye: 0.9, curl: 10 },
+    meteor: { dye: 0.5, curl: 14 },
+    ocean: { dye: 0.45, curl: 12 },
+    cloud: { dye: 0.12, curl: 6 },
+    fire: { dye: 1.4, curl: 30 },
+    galaxy: { dye: 1.0, curl: 8 },
+    ripple: { dye: 0.2, curl: 16 },
+    breathing: { dye: 0.5, curl: 8 },
+    rainbowCycle: { dye: 0.06, curl: 24 },
+    rainbowWave: { dye: 0.35, curl: 12 },
+    rain: { dye: 0.55, curl: 18 },
+  };
+
+  let effect = "suminagashi";
+  try {
+    const saved = localStorage.getItem("bg-effect");
+    if (saved && (saved in EFFECT_PARAMS || saved === "random")) effect = saved;
+  } catch {}
+  let randomCurrent = "aurora";
+  let fx = {}; // per-effect scratch state, reset on every switch
+
+  const activeEffect = () => (effect === "random" ? randomCurrent : effect);
+  function setEffect(name) {
+    if (!(name in EFFECT_PARAMS) && name !== "random") return;
+    effect = name;
+    try {
+      localStorage.setItem("bg-effect", name);
+    } catch {}
+    fx = {};
+    washing = 1.2; // rinse the previous scene away
+  }
+  const onSetEffect = (e) => setEffect(String(e.detail || ""));
+  addEventListener("set-bg-effect", onSetEffect);
+
+  function hsl(h, s, l) {
+    const c = new THREE.Color();
+    c.setHSL(((h % 1) + 1) % 1, s, l);
+    return "#" + c.getHexString();
+  }
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const slow = reducedMotion ? 2.5 : 1; // stretch spawn intervals
+
+  const CHOREO = {
+    suminagashi(now, dt) {
+      const idle = now - lastInteraction > 3000;
+      fx.drop = (fx.drop ?? 1200) - dt * 1000;
+      if (idle && fx.drop <= 0) {
+        const x = rnd(0.14, 0.86);
+        const y = rnd(0.16, 0.84);
+        dropInk(x, y, randomInk(), rnd(1.0, 1.8));
+        if (Math.random() < 0.5) {
+          const x2 = Math.min(Math.max(x + rnd(-0.08, 0.08), 0.08), 0.92);
+          const y2 = Math.min(Math.max(y + rnd(-0.08, 0.08), 0.08), 0.92);
+          setTimeout(() => dropInk(x2, y2, randomInk(), rnd(0.6, 1.1)), rnd(220, 520));
+        }
+        fx.drop = rnd(1100, 2500) * slow;
       }
-      nextDrop = (reducedMotion ? 5000 : 1100) + Math.random() * 1400;
-    }
+      fx.stir = (fx.stir ?? 2600) - dt * 1000;
+      if (!reducedMotion && fx.stir <= 0) {
+        const t = now * 0.00012;
+        const a = t * 6.0 + rnd(0, 1.5);
+        splatVelocity(
+          0.5 + Math.sin(t * 1.7) * 0.3,
+          0.5 + Math.cos(t * 1.1) * 0.3,
+          Math.cos(a) * 130,
+          Math.sin(a) * 130,
+          14
+        );
+        fx.stir = rnd(700, 1600);
+      }
+    },
 
-    nextStir -= dt * 1000;
-    if (!reducedMotion && nextStir <= 0) {
-      const t = now * 0.00012;
-      const cx = 0.5 + Math.sin(t * 1.7) * 0.3;
-      const cy = 0.5 + Math.cos(t * 1.1) * 0.3;
-      const a = t * 6.0 + Math.random() * 1.5;
-      splatVelocity(cx, cy, Math.cos(a) * 130, Math.sin(a) * 130, 14);
-      nextStir = 700 + Math.random() * 900;
+    aurora(now, dt) {
+      // waving curtains of green → teal → violet light in the upper sky
+      for (let c = 0; c < 3; c++) {
+        const x = Math.random();
+        const y = 0.84 - c * 0.06 + 0.06 * Math.sin(x * 7 + now * 0.0007 + c * 2.1);
+        const hue = 0.36 + 0.32 * x + 0.04 * c;
+        splatDye(x, y, inkAbsorption(hsl(hue, 0.85, dark ? 0.58 : 0.42), 0.011), rnd(1.2, 2.6));
+      }
+      fx.shim = (fx.shim ?? 0) - dt * 1000;
+      if (fx.shim <= 0) {
+        const x = Math.random();
+        splatVelocity(x, 0.7, Math.sin(now * 0.0005 + x * 9) * 50, rnd(30, 90), 8);
+        fx.shim = rnd(120, 320) * slow;
+      }
+    },
+
+    meteor(now, dt) {
+      fx.list = fx.list || [];
+      fx.spawn = (fx.spawn ?? 600) - dt * 1000;
+      if (fx.spawn <= 0) {
+        const a = rnd(-2.2, -0.9); // heading, radians (downward arc)
+        fx.list.push({
+          x: rnd(0.15, 0.95),
+          y: rnd(0.85, 1.02),
+          vx: Math.cos(a),
+          vy: Math.sin(a),
+          sp: rnd(0.45, 0.75),
+          life: rnd(0.8, 1.3),
+          hue: Math.random() < 0.3 ? 0.13 : 0.62, // gold or ice blue
+        });
+        fx.spawn = rnd(900, 2400) * slow;
+      }
+      fx.list = fx.list.filter((m) => {
+        m.life -= dt;
+        m.x += m.vx * m.sp * dt;
+        m.y += m.vy * m.sp * dt;
+        if (m.life <= 0 || m.x < -0.1 || m.x > 1.1 || m.y < -0.1) return false;
+        splatDye(m.x, m.y, inkAbsorption(hsl(m.hue, 0.75, dark ? 0.75 : 0.5), 0.1), 0.9);
+        splatVelocity(m.x, m.y, m.vx * 220, m.vy * 220, 1.6);
+        return true;
+      });
+    },
+
+    ocean(now, dt) {
+      for (let i = 0; i < 3; i++) {
+        const x = Math.random();
+        fx.band = ((fx.band ?? 0) + 1) % 3;
+        const y = 0.14 + fx.band * 0.11 + 0.07 * Math.sin(x * 9 - now * 0.0011 + fx.band * 1.8);
+        splatDye(x, y, inkAbsorption(hsl(0.55 + 0.06 * fx.band, 0.7, dark ? 0.6 : 0.4), 0.03), rnd(2, 4.5));
+      }
+      fx.surge = (fx.surge ?? 0) - dt * 1000;
+      if (fx.surge <= 0) {
+        const x = Math.random();
+        splatVelocity(x, rnd(0.1, 0.4), Math.cos(now * 0.0009) * 140, Math.sin(x * 9 - now * 0.0011) * 60, 12);
+        fx.surge = rnd(200, 500) * slow;
+      }
+    },
+
+    cloud(now, dt) {
+      fx.puff = (fx.puff ?? 0) - dt * 1000;
+      if (fx.puff <= 0) {
+        splatDye(Math.random(), rnd(0.55, 0.92), inkAbsorption(dark ? "#d9d6cf" : "#9aa0ab", 0.16), rnd(8, 16));
+        fx.puff = rnd(500, 1100) * slow;
+      }
+      fx.wind = (fx.wind ?? 0) - dt * 1000;
+      if (fx.wind <= 0) {
+        splatVelocity(Math.random(), rnd(0.5, 0.95), 60 + Math.sin(now * 0.0002) * 40, rnd(-8, 8), 18);
+        fx.wind = rnd(400, 900);
+      }
+    },
+
+    fire(now, dt) {
+      for (let i = 0; i < 2; i++) {
+        const x = 0.5 + (Math.random() - 0.5) * rnd(0.2, 0.85);
+        const r = Math.random();
+        const hex = r < 0.45 ? "#d43a0f" : r < 0.8 ? "#f28b1c" : "#f6d43c";
+        splatDye(x, rnd(0.02, 0.1), inkAbsorption(hex, 0.09), rnd(1, 2.6));
+      }
+      fx.buoy = (fx.buoy ?? 0) - dt * 1000;
+      if (fx.buoy <= 0) {
+        splatVelocity(0.5 + (Math.random() - 0.5) * 0.8, rnd(0.05, 0.25), rnd(-50, 50), rnd(220, 380), rnd(2, 5));
+        fx.buoy = rnd(80, 200) * slow;
+      }
+    },
+
+    galaxy(now, dt) {
+      fx.th = (fx.th ?? 0) + dt * 0.55;
+      const asp = innerWidth / innerHeight;
+      for (let arm = 0; arm < 2; arm++) {
+        const r = rnd(0.04, 0.42);
+        const a = fx.th + arm * Math.PI + r * 6.5; // trailing spiral arms
+        const x = 0.5 + (Math.cos(a) * r) / asp;
+        const y = 0.5 + Math.sin(a) * r;
+        const hue = r < 0.1 ? 0.12 : 0.68 + r * 0.25; // golden core, violet arms
+        splatDye(x, y, inkAbsorption(hsl(hue, r < 0.1 ? 0.5 : 0.7, dark ? 0.65 : 0.45), 0.02), rnd(0.7, 1.4));
+      }
+      fx.spin = (fx.spin ?? 0) - dt * 1000;
+      if (fx.spin <= 0) {
+        for (let k = 0; k < 4; k++) {
+          const a = fx.th * 1.3 + (k * Math.PI) / 2;
+          splatVelocity(0.5 + (Math.cos(a) * 0.28) / asp, 0.5 + Math.sin(a) * 0.28, -Math.sin(a) * 90, Math.cos(a) * 90, 6);
+        }
+        fx.spin = rnd(250, 450) * slow;
+      }
+    },
+
+    ripple(now, dt) {
+      fx.list = fx.list || [];
+      fx.spawn = (fx.spawn ?? 400) - dt * 1000;
+      if (fx.spawn <= 0) {
+        fx.list.push({ x: rnd(0.15, 0.85), y: rnd(0.2, 0.8), age: 0, hue: Math.random() });
+        fx.spawn = rnd(1400, 2600) * slow;
+      }
+      const asp = innerWidth / innerHeight;
+      fx.list = fx.list.filter((rp) => {
+        rp.age += dt;
+        if (rp.age > 1.3) return false;
+        const R = rp.age * 0.28;
+        for (let k = 0; k < 6; k++) {
+          const a = (k / 6) * Math.PI * 2 + rp.age * 2;
+          const x = rp.x + (Math.cos(a) * R) / asp;
+          const y = rp.y + Math.sin(a) * R;
+          splatVelocity(x, y, Math.cos(a) * 120 * (1.3 - rp.age), Math.sin(a) * 120 * (1.3 - rp.age), 3);
+          if (k % 2 === 0) splatDye(x, y, inkAbsorption(hsl(rp.hue, 0.55, dark ? 0.65 : 0.45), 0.03), 1.4);
+        }
+        return true;
+      });
+    },
+
+    breathing(now, dt) {
+      const phase = Math.sin(now * 0.00045); // >0 exhale, <0 inhale
+      fx.hue = (fx.hue ?? Math.random()) + dt * 0.008;
+      if (phase > 0.1) {
+        splatDye(0.5, 0.5, inkAbsorption(hsl(fx.hue, 0.6, dark ? 0.62 : 0.45), 0.022 * phase), 12);
+      }
+      fx.pulse = (fx.pulse ?? 0) - dt * 1000;
+      if (fx.pulse <= 0) {
+        const asp = innerWidth / innerHeight;
+        for (let k = 0; k < 6; k++) {
+          const a = (k / 6) * Math.PI * 2 + now * 0.0001;
+          splatVelocity(
+            0.5 + (Math.cos(a) * 0.16) / asp,
+            0.5 + Math.sin(a) * 0.16,
+            Math.cos(a) * 110 * phase,
+            Math.sin(a) * 110 * phase,
+            6
+          );
+        }
+        fx.pulse = rnd(150, 350) * slow;
+      }
+    },
+
+    rainbowCycle(now, dt) {
+      fx.hue = fx.hue ?? Math.random();
+      fx.drop = (fx.drop ?? 600) - dt * 1000;
+      if (fx.drop <= 0) {
+        fx.hue = (fx.hue + 0.09) % 1;
+        dropInk(rnd(0.14, 0.86), rnd(0.16, 0.84), hsl(fx.hue, 0.8, dark ? 0.6 : 0.45), rnd(1.0, 1.7));
+        fx.drop = rnd(600, 1300) * slow;
+      }
+      fx.stir = (fx.stir ?? 2600) - dt * 1000;
+      if (!reducedMotion && fx.stir <= 0) {
+        const t = now * 0.00012;
+        const a = t * 6.0 + rnd(0, 1.5);
+        splatVelocity(0.5 + Math.sin(t * 1.7) * 0.3, 0.5 + Math.cos(t * 1.1) * 0.3, Math.cos(a) * 130, Math.sin(a) * 130, 14);
+        fx.stir = rnd(700, 1600);
+      }
+    },
+
+    rainbowWave(now, dt) {
+      const front = ((now * 0.00006) % 1.25) - 0.125; // sweeps left → right
+      for (let i = 0; i < 3; i++) {
+        const y = Math.random();
+        splatDye(
+          front + rnd(-0.02, 0.02),
+          y,
+          inkAbsorption(hsl(now * 0.00005 + y * 0.25, 0.85, dark ? 0.6 : 0.45), 0.05),
+          rnd(1.5, 3)
+        );
+      }
+      fx.push = (fx.push ?? 0) - dt * 1000;
+      if (fx.push <= 0) {
+        splatVelocity(front, Math.random(), 160, rnd(-30, 30), 10);
+        fx.push = rnd(150, 400) * slow;
+      }
+    },
+
+    rain(now, dt) {
+      fx.spawn = (fx.spawn ?? 0) - dt * 1000;
+      if (fx.spawn <= 0) {
+        const x = Math.random();
+        splatDye(x, rnd(0.9, 0.99), inkAbsorption(dark ? "#8fb4d8" : "#4a6b8a", 0.5), rnd(0.35, 0.7));
+        splatVelocity(x, 0.95, rnd(-15, 15), -rnd(260, 420), rnd(0.8, 1.6));
+        fx.spawn = rnd(90, 260) * slow;
+      }
+    },
+  };
+
+  function autoUpdate(now, dt) {
+    if (effect === "random") {
+      fx.switch = (fx.switch ?? 1) - dt * 1000;
+      if (fx.switch <= 0) {
+        const names = Object.keys(CHOREO).filter((n) => n !== randomCurrent);
+        randomCurrent = names[Math.floor(Math.random() * names.length)];
+        fx = { switch: rnd(20000, 35000) };
+        washing = 0.8;
+      }
     }
+    (CHOREO[activeEffect()] || CHOREO.suminagashi)(now, dt);
   }
 
   let washing = 0;
 
   function step(dt) {
+    const P = EFFECT_PARAMS[activeEffect()] || EFFECT_PARAMS.suminagashi;
+
     curlMat.uniforms.uVelocity.value = velocity.read.texture;
     curlMat.uniforms.uTexel.value.copy(velocity.texel);
     blit(curlMat, curlRT);
@@ -455,7 +719,7 @@ function createSim(mount) {
     vorticityMat.uniforms.uVelocity.value = velocity.read.texture;
     vorticityMat.uniforms.uCurl.value = curlRT.texture;
     vorticityMat.uniforms.uTexel.value.copy(velocity.texel);
-    vorticityMat.uniforms.uCurlStrength.value = CONFIG.CURL;
+    vorticityMat.uniforms.uCurlStrength.value = P.curl;
     vorticityMat.uniforms.uDt.value = dt;
     blit(vorticityMat, velocity.write);
     velocity.swap();
@@ -494,7 +758,7 @@ function createSim(mount) {
     advectMat.uniforms.uVelocity.value = velocity.read.texture;
     advectMat.uniforms.uSource.value = dye.read.texture;
     advectMat.uniforms.uTexel.value.copy(dye.texel);
-    advectMat.uniforms.uDissipation.value = CONFIG.DYE_DISSIPATION + (washing > 0 ? 2.4 : 0);
+    advectMat.uniforms.uDissipation.value = P.dye + (washing > 0 ? 2.4 : 0);
     blit(advectMat, dye.write);
     dye.swap();
 
@@ -561,8 +825,23 @@ function createSim(mount) {
   }
   addEventListener("resize", onResize);
 
-  seed();
+  if (activeEffect() === "suminagashi") seed();
   raf = requestAnimationFrame(frame);
+
+  // console access: window.__sumi.setEffect('aurora'), .effects, .tick(n)
+  window.__sumi = {
+    setEffect,
+    getEffect: () => effect,
+    effects: [...Object.keys(CHOREO), "random"],
+    // drive n frames manually (e.g. when rAF is suspended in hidden tabs)
+    tick(n = 60) {
+      for (let i = 0; i < n; i++) {
+        cancelAnimationFrame(raf);
+        lastT -= 1000 / 60;
+        frame(performance.now());
+      }
+    },
+  };
 
   return {
     setDark(isDark) {
@@ -579,6 +858,8 @@ function createSim(mount) {
     dispose() {
       cancelAnimationFrame(raf);
       clearTimeout(resizeTimer);
+      delete window.__sumi;
+      removeEventListener("set-bg-effect", onSetEffect);
       removeEventListener("pointermove", onPointerMove);
       removeEventListener("pointerdown", onPointerDown);
       removeEventListener("resize", onResize);
