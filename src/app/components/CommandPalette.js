@@ -20,9 +20,7 @@ import {
   Moon,
   Droplets,
   Star,
-  Cloud,
   Palette,
-  CloudRain,
   Shuffle,
 } from "lucide-react";
 
@@ -30,9 +28,7 @@ import {
 const BACKGROUND_EFFECTS = [
   { id: "suminagashi", name: "Suminagashi (墨流し)", icon: Droplets },
   { id: "meteor", name: "Meteor", icon: Star },
-  { id: "cloud", name: "Cloud", icon: Cloud },
   { id: "rainbowCycle", name: "Rainbow Cycle", icon: Palette },
-  { id: "rain", name: "Rain", icon: CloudRain },
   { id: "random", name: "Random (auto-rotate)", icon: Shuffle },
 ];
 import useMobileDevice from "../hooks/useMobileDevice";

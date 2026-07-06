@@ -425,9 +425,7 @@ function createSim(mount) {
   const EFFECT_PARAMS = {
     suminagashi: { dye: 0.035, curl: 24 },
     meteor: { dye: 0.5, curl: 14 },
-    cloud: { dye: 0.4, curl: 4 },
     rainbowCycle: { dye: 0.06, curl: 24 },
-    rain: { dye: 0.55, curl: 18 },
   };
 
   let effect = "suminagashi";
@@ -516,78 +514,6 @@ function createSim(mount) {
       });
     },
 
-    cloud(now, dt) {
-      // real cloud shapes as puff clusters, re-inked each frame so they hold
-      // their form while the wind wisps their edges away.
-      // types: cumulus (cauliflower), cirrus (high streaks),
-      // stratus/altostratus (flat sheet), cumulonimbus (dark-based tower)
-      if (!fx.make) {
-        fx.make = () => {
-          const kind = ["cumulus", "cumulus", "cirrus", "stratus", "cumulonimbus"][Math.floor(Math.random() * 5)];
-          const sc = rnd(0.75, 1.3);
-          const puffs = [];
-          if (kind === "cumulus") {
-            puffs.push(
-              { dx: -0.055 * sc, dy: 0, r: 2.6 * sc },
-              { dx: 0, dy: 0, r: 3.2 * sc },
-              { dx: 0.055 * sc, dy: 0, r: 2.6 * sc },
-              { dx: -0.03 * sc, dy: 0.03 * sc, r: 2.2 * sc },
-              { dx: 0.028 * sc, dy: 0.028 * sc, r: 2 * sc },
-              { dx: 0, dy: 0.052 * sc, r: 2.4 * sc }
-            );
-          } else if (kind === "cirrus") {
-            for (let i = 0; i < 6; i++) {
-              puffs.push({ dx: (i - 2.5) * 0.045 * sc, dy: Math.sin(i * 1.1) * 0.012, r: rnd(0.7, 1.2) });
-            }
-          } else if (kind === "stratus") {
-            for (let i = 0; i < 4; i++) puffs.push({ dx: (i - 1.5) * 0.09 * sc, dy: rnd(-0.008, 0.008), r: 5 * sc });
-          } else {
-            // cumulonimbus: dark flat base, towering column, anvil top
-            puffs.push(
-              { dx: -0.04 * sc, dy: 0, r: 2.8 * sc, base: true },
-              { dx: 0.04 * sc, dy: 0, r: 2.8 * sc, base: true },
-              { dx: 0, dy: 0.05 * sc, r: 2.8 * sc },
-              { dx: 0.012 * sc, dy: 0.11 * sc, r: 2.4 * sc },
-              { dx: 0, dy: 0.17 * sc, r: 2 * sc },
-              { dx: -0.05 * sc, dy: 0.21 * sc, r: 1.8 * sc },
-              { dx: 0.05 * sc, dy: 0.21 * sc, r: 1.8 * sc },
-              { dx: 0, dy: 0.215 * sc, r: 2.2 * sc }
-            );
-          }
-          return {
-            kind,
-            puffs,
-            x: -0.15,
-            y: kind === "cirrus" ? rnd(0.84, 0.94) : kind === "cumulonimbus" ? rnd(0.42, 0.5) : rnd(0.58, 0.8),
-            speed: kind === "cirrus" ? 0.026 : kind === "stratus" ? 0.01 : 0.016,
-            strength: kind === "cirrus" ? 0.0008 : kind === "stratus" ? 0.0006 : 0.001,
-          };
-        };
-        fx.clouds = [fx.make()];
-        fx.clouds[0].x = rnd(0.2, 0.6); // one cloud already mid-sky
-      }
-      fx.spawn = (fx.spawn ?? 2000) - dt * 1000;
-      if (fx.spawn <= 0 && fx.clouds.length < 3) {
-        fx.clouds.push(fx.make());
-        fx.spawn = rnd(6000, 12000) * slow;
-      }
-      const body = dark ? "#ddd8ce" : "#b6bbc2";
-      const baseCol = dark ? "#8f8a82" : "#8b9099";
-      fx.clouds = fx.clouds.filter((cl) => {
-        cl.x += cl.speed * dt;
-        if (cl.x > 1.3) return false;
-        for (const p of cl.puffs) {
-          splatDye(cl.x + p.dx, cl.y + p.dy, inkAbsorption(p.base ? baseCol : body, cl.strength), p.r);
-        }
-        return true;
-      });
-      fx.wind = (fx.wind ?? 0) - dt * 1000;
-      if (fx.wind <= 0) {
-        splatVelocity(Math.random(), rnd(0.45, 0.95), 30, rnd(-3, 3), 20);
-        fx.wind = rnd(500, 900);
-      }
-    },
-
     rainbowCycle(now, dt) {
       fx.hue = fx.hue ?? Math.random();
       fx.drop = (fx.drop ?? 600) - dt * 1000;
@@ -602,16 +528,6 @@ function createSim(mount) {
         const a = t * 6.0 + rnd(0, 1.5);
         splatVelocity(0.5 + Math.sin(t * 1.7) * 0.3, 0.5 + Math.cos(t * 1.1) * 0.3, Math.cos(a) * 130, Math.sin(a) * 130, 14);
         fx.stir = rnd(700, 1600);
-      }
-    },
-
-    rain(now, dt) {
-      fx.spawn = (fx.spawn ?? 0) - dt * 1000;
-      if (fx.spawn <= 0) {
-        const x = Math.random();
-        splatDye(x, rnd(0.9, 0.99), inkAbsorption(dark ? "#8fb4d8" : "#4a6b8a", 0.5), rnd(0.35, 0.7));
-        splatVelocity(x, 0.95, rnd(-15, 15), -rnd(260, 420), rnd(0.8, 1.6));
-        fx.spawn = rnd(90, 260) * slow;
       }
     },
   };
@@ -750,7 +666,7 @@ function createSim(mount) {
   if (activeEffect() === "suminagashi") seed();
   raf = requestAnimationFrame(frame);
 
-  // console access: window.__sumi.setEffect('rain'), .effects, .tick(n)
+  // console access: window.__sumi.setEffect('meteor'), .effects, .tick(n)
   window.__sumi = {
     setEffect,
     getEffect: () => effect,
