@@ -311,7 +311,7 @@ function createSim(mount) {
     varying vec2 vUv;
     uniform sampler2D uDye;
     uniform vec3 uPaper;
-    uniform float uDark, uStarry, uTime, uAspect;
+    uniform float uDark;
 
     float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
     float noise(vec2 p){
@@ -333,30 +333,6 @@ function createSim(mount) {
       vec3 darkCol  = uPaper + (1.0 - T) * 1.0 + fiber * 0.22;
       vec3 col = mix(lightCol, darkCol, uDark);
 
-      // starry mode: a crisp celestial layer beneath the ink — twinkling
-      // stars and a moon, with dye mists drifting across them
-      if (uStarry > 0.5) {
-        vec2 cell = floor(vUv * 70.0);
-        float h = hash(cell);
-        float star = 0.0;
-        if (h > 0.976) {
-          vec2 f = fract(vUv * 70.0) - 0.5;
-          float tw = 0.5 + 0.5 * sin(uTime * (1.2 + hash(cell + 7.0) * 2.6) + hash(cell + 3.0) * 6.28);
-          star = smoothstep(0.24, 0.02, length(f)) * tw;
-        }
-        vec2 mp = vUv - vec2(0.76, 0.78);
-        mp.x *= uAspect;
-        float md = length(mp);
-        float disc = smoothstep(0.052, 0.044, md);
-        float halo = smoothstep(0.17, 0.05, md) * 0.22;
-        // the denser the ink, the dimmer the sky shows through
-        float veil = exp(-(A.r + A.g + A.b) * 0.8);
-        vec3 starCol = mix(vec3(0.36, 0.34, 0.55), vec3(0.92, 0.93, 1.0), uDark);
-        vec3 moonCol = mix(vec3(0.72, 0.63, 0.38), vec3(0.94, 0.91, 0.78), uDark);
-        col = mix(col, starCol, star * veil * mix(0.55, 0.95, uDark));
-        col = mix(col, moonCol, clamp((disc * 0.9 + halo) * veil, 0.0, 1.0));
-      }
-
       vec2 uv2 = vUv * (1.0 - vUv.yx);
       float vign = pow(uv2.x * uv2.y * 15.0, 0.18);
       col *= 0.94 + 0.06 * vign;
@@ -368,9 +344,6 @@ function createSim(mount) {
       uDye: { value: null },
       uPaper: { value: new THREE.Vector3(paperColor.r, paperColor.g, paperColor.b) },
       uDark: { value: dark ? 1 : 0 },
-      uStarry: { value: 0 },
-      uTime: { value: 0 },
-      uAspect: { value: innerWidth / innerHeight },
     }
   );
 
@@ -452,17 +425,10 @@ function createSim(mount) {
   const EFFECT_PARAMS = {
     suminagashi: { dye: 0.035, curl: 24 },
     aurora: { dye: 0.9, curl: 10 },
-    hanabi: { dye: 0.7, curl: 14 },
-    starry: { dye: 0.5, curl: 5 },
     meteor: { dye: 0.5, curl: 14 },
     ocean: { dye: 0.75, curl: 10 },
     cloud: { dye: 0.4, curl: 4 },
-    fire: { dye: 1.1, curl: 22 },
-    galaxy: { dye: 1.0, curl: 8 },
-    ripple: { dye: 0.8, curl: 14 },
-    breathing: { dye: 0.7, curl: 6 },
     rainbowCycle: { dye: 0.06, curl: 24 },
-    rainbowWave: { dye: 0.7, curl: 12 },
     rain: { dye: 0.55, curl: 18 },
   };
 
@@ -494,62 +460,6 @@ function createSim(mount) {
   }
   const rnd = (a, b) => a + Math.random() * (b - a);
   const slow = reducedMotion ? 2.5 : 1; // stretch spawn intervals
-
-  /* Japanese fireworks (花火) helpers */
-  const HANABI_COLORS = ["#f2c14e", "#e0503a", "#57b06b", "#5b8fd6", "#b06bd0", "#e8e4da"];
-
-  // 型物 shapes as unit-offset point rings
-  const HEART_PTS = Array.from({ length: 22 }, (_, i) => {
-    const t = (i / 22) * Math.PI * 2;
-    return [
-      (16 * Math.sin(t) ** 3) / 16,
-      (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 16,
-    ];
-  });
-  const STAR_PTS = Array.from({ length: 10 }, (_, k) => {
-    const a = (k / 10) * Math.PI * 2 + Math.PI / 2;
-    const r = k % 2 ? 0.45 : 1;
-    return [Math.cos(a) * r, Math.sin(a) * r];
-  });
-
-  function hanabiShell(kind) {
-    return {
-      kind, // warimono | hanwarimono | katamono | small
-      x: rnd(0.25, 0.75),
-      y: 0.02,
-      ty: kind === "small" ? rnd(0.5, 0.7) : rnd(0.58, 0.8),
-      vy: rnd(0.35, 0.48),
-      color: HANABI_COLORS[Math.floor(Math.random() * HANABI_COLORS.length)],
-    };
-  }
-
-  function hanabiBurst(sh) {
-    const asp = innerWidth / innerHeight;
-    splatDye(sh.x, sh.y, inkAbsorption("#f5efdc", 0.18), 1.6); // opening flash
-    const b = {
-      x: sh.x,
-      y: sh.y,
-      age: 0,
-      kind: sh.kind,
-      color: sh.color,
-      color2: HANABI_COLORS[Math.floor(Math.random() * HANABI_COLORS.length)],
-    };
-    if (sh.kind === "katamono") {
-      b.pts = Math.random() < 0.5 ? HEART_PTS : STAR_PTS;
-    } else {
-      b.n = sh.kind === "small" ? 10 : 18;
-      b.half = sh.kind === "hanwarimono";
-    }
-    // one-shot radial impulse; the petal streaks are drawn over the next
-    // half second by the burst updater in the choreography
-    const n = b.n || 16;
-    const F = sh.kind === "small" ? 150 : sh.kind === "katamono" ? 80 : 210;
-    for (let k = 0; k < n; k++) {
-      const a = b.half ? (k / (n - 1)) * Math.PI : (k / n) * Math.PI * 2;
-      splatVelocity(sh.x + (Math.cos(a) * 0.02) / asp, sh.y + Math.sin(a) * 0.02, Math.cos(a) * F, Math.sin(a) * F, 0.9);
-    }
-    (fx.bursts = fx.bursts || []).push(b);
-  }
 
   const CHOREO = {
     suminagashi(now, dt) {
@@ -725,101 +635,6 @@ function createSim(mount) {
       }
     },
 
-    fire(now, dt) {
-      // a campfire: narrow ember bed, quick small flame licks, stray sparks
-      for (let i = 0; i < 3; i++) {
-        const x = 0.5 + (Math.random() - 0.5) * 0.34;
-        const r = Math.random();
-        const hex = r < 0.5 ? "#e04a12" : r < 0.85 ? "#f28b1c" : "#f8d84a";
-        splatDye(x, rnd(0.02, 0.07), inkAbsorption(hex, 0.07), rnd(0.7, 1.5));
-      }
-      fx.buoy = (fx.buoy ?? 0) - dt * 1000;
-      if (fx.buoy <= 0) {
-        splatVelocity(0.5 + (Math.random() - 0.5) * 0.36, rnd(0.04, 0.16), rnd(-30, 30), rnd(90, 180), rnd(1, 2.2));
-        fx.buoy = rnd(40, 110) * slow;
-      }
-      fx.spark = (fx.spark ?? 0) - dt * 1000;
-      if (fx.spark <= 0) {
-        const x = 0.5 + (Math.random() - 0.5) * 0.3;
-        splatDye(x, rnd(0.1, 0.2), inkAbsorption("#f8d84a", 0.25), 0.25);
-        splatVelocity(x, rnd(0.1, 0.2), rnd(-15, 15), rnd(160, 240), 0.5);
-        fx.spark = rnd(300, 700) * slow;
-      }
-    },
-
-    galaxy(now, dt) {
-      fx.th = (fx.th ?? 0) + dt * 0.55;
-      const asp = innerWidth / innerHeight;
-      for (let arm = 0; arm < 2; arm++) {
-        const r = rnd(0.04, 0.42);
-        const a = fx.th + arm * Math.PI + r * 6.5; // trailing spiral arms
-        const x = 0.5 + (Math.cos(a) * r) / asp;
-        const y = 0.5 + Math.sin(a) * r;
-        const hue = r < 0.1 ? 0.12 : 0.68 + r * 0.25; // golden core, violet arms
-        splatDye(x, y, inkAbsorption(hsl(hue, r < 0.1 ? 0.5 : 0.7, dark ? 0.65 : 0.45), 0.02), rnd(0.7, 1.4));
-      }
-      fx.spin = (fx.spin ?? 0) - dt * 1000;
-      if (fx.spin <= 0) {
-        for (let k = 0; k < 4; k++) {
-          const a = fx.th * 1.3 + (k * Math.PI) / 2;
-          splatVelocity(0.5 + (Math.cos(a) * 0.28) / asp, 0.5 + Math.sin(a) * 0.28, -Math.sin(a) * 90, Math.cos(a) * 90, 6);
-        }
-        fx.spin = rnd(250, 450) * slow;
-      }
-    },
-
-    ripple(now, dt) {
-      // delicate raindrop rings, not tidal waves
-      fx.list = fx.list || [];
-      fx.spawn = (fx.spawn ?? 300) - dt * 1000;
-      if (fx.spawn <= 0) {
-        fx.list.push({ x: rnd(0.12, 0.88), y: rnd(0.15, 0.85), age: 0, hue: Math.random() });
-        fx.spawn = rnd(700, 1400) * slow;
-      }
-      const asp = innerWidth / innerHeight;
-      fx.list = fx.list.filter((rp) => {
-        rp.age += dt;
-        if (rp.age > 1.2) return false;
-        const R = 0.015 + rp.age * 0.045;
-        const fade = Math.max(0, 1 - rp.age / 1.2);
-        for (let k = 0; k < 10; k++) {
-          const a = (k / 10) * Math.PI * 2 + rp.age * 1.5;
-          const x = rp.x + (Math.cos(a) * R) / asp;
-          const y = rp.y + Math.sin(a) * R;
-          splatVelocity(x, y, Math.cos(a) * 25 * fade, Math.sin(a) * 25 * fade, 0.6);
-          // dye only once the ring has opened up, so the centre stays clear
-          if (rp.age > 0.3) splatDye(x, y, inkAbsorption(hsl(rp.hue, 0.5, dark ? 0.6 : 0.45), 0.028 * fade), 0.18);
-        }
-        return true;
-      });
-    },
-
-    breathing(now, dt) {
-      // a small soft orb that wanders slowly and breathes gently
-      const phase = Math.sin(now * 0.0005); // >0 exhale, <0 inhale
-      fx.hue = (fx.hue ?? Math.random()) + dt * 0.006;
-      const cx = 0.5 + 0.18 * Math.sin(now * 0.00011);
-      const cy = 0.5 + 0.14 * Math.sin(now * 0.00017 + 1.3);
-      if (phase > 0.05) {
-        splatDye(cx, cy, inkAbsorption(hsl(fx.hue, 0.55, dark ? 0.6 : 0.45), 0.02 * phase), 4.5);
-      }
-      fx.pulse = (fx.pulse ?? 0) - dt * 1000;
-      if (fx.pulse <= 0) {
-        const asp = innerWidth / innerHeight;
-        for (let k = 0; k < 5; k++) {
-          const a = (k / 5) * Math.PI * 2 + now * 0.0001;
-          splatVelocity(
-            cx + (Math.cos(a) * 0.09) / asp,
-            cy + Math.sin(a) * 0.09,
-            Math.cos(a) * 55 * phase,
-            Math.sin(a) * 55 * phase,
-            3.5
-          );
-        }
-        fx.pulse = rnd(180, 380) * slow;
-      }
-    },
-
     rainbowCycle(now, dt) {
       fx.hue = fx.hue ?? Math.random();
       fx.drop = (fx.drop ?? 600) - dt * 1000;
@@ -837,24 +652,6 @@ function createSim(mount) {
       }
     },
 
-    rainbowWave(now, dt) {
-      const front = ((now * 0.00006) % 1.25) - 0.125; // sweeps left → right
-      for (let i = 0; i < 3; i++) {
-        const y = Math.random();
-        splatDye(
-          front + rnd(-0.02, 0.02),
-          y,
-          inkAbsorption(hsl(now * 0.00005 + y * 0.25, 0.8, dark ? 0.52 : 0.45), 0.02),
-          rnd(1, 2)
-        );
-      }
-      fx.push = (fx.push ?? 0) - dt * 1000;
-      if (fx.push <= 0) {
-        splatVelocity(front, Math.random(), 110, rnd(-25, 25), 10);
-        fx.push = rnd(150, 400) * slow;
-      }
-    },
-
     rain(now, dt) {
       fx.spawn = (fx.spawn ?? 0) - dt * 1000;
       if (fx.spawn <= 0) {
@@ -862,119 +659,6 @@ function createSim(mount) {
         splatDye(x, rnd(0.9, 0.99), inkAbsorption(dark ? "#8fb4d8" : "#4a6b8a", 0.5), rnd(0.35, 0.7));
         splatVelocity(x, 0.95, rnd(-15, 15), -rnd(260, 420), rnd(0.8, 1.6));
         fx.spawn = rnd(90, 260) * slow;
-      }
-    },
-
-    hanabi(now, dt) {
-      // 花火大会: shells rise and burst as 割物 (chrysanthemum spheres),
-      // 半割物 (half fans), 型物 (hearts/stars), スターマイン volleys, and
-      // 手筒花火 (handheld fountains spraying gold from below)
-      fx.shells = fx.shells || [];
-      fx.next = (fx.next ?? 800) - dt * 1000;
-      if (fx.next <= 0) {
-        const type =
-          fx.forceType ||
-          ["warimono", "hanwarimono", "katamono", "starmine", "tezutsu"][Math.floor(Math.random() * 5)];
-        if (type === "starmine") {
-          const list = fx.shells;
-          for (let i = 0; i < 6; i++) {
-            setTimeout(() => {
-              if (fx.shells === list) list.push(hanabiShell("small"));
-            }, i * 320);
-          }
-          fx.next = rnd(6000, 9000) * slow;
-        } else if (type === "tezutsu") {
-          fx.tezutsu = { x: rnd(0.3, 0.7), t: rnd(2.5, 3.5) };
-          fx.next = rnd(5500, 8000) * slow;
-        } else {
-          fx.shells.push(hanabiShell(type));
-          fx.next = rnd(2800, 5000) * slow;
-        }
-      }
-      fx.shells = fx.shells.filter((sh) => {
-        sh.y += sh.vy * dt;
-        if (sh.y > 1.05) return false;
-        // dye-only trail: repeated velocity splats along one line would
-        // build a standing jet that streams everything to the top edge
-        splatDye(sh.x + rnd(-0.002, 0.002), sh.y, inkAbsorption("#e8c87a", 0.045), 0.28);
-        if (sh.y >= sh.ty) {
-          hanabiBurst(sh);
-          return false;
-        }
-        return true;
-      });
-      // petal streaks: draw the expanding shell for ~half a second
-      fx.bursts = (fx.bursts || []).filter((b) => {
-        b.age += dt;
-        if (b.age > 0.5) return false;
-        const asp = innerWidth / innerHeight;
-        if (b.kind === "katamono") {
-          const s = 0.05 + b.age * 0.09;
-          for (const p of b.pts) {
-            splatDye(b.x + (p[0] * s) / asp, b.y + p[1] * s, inkAbsorption(b.color, 0.08), 0.15);
-          }
-        } else {
-          const R = 0.015 + b.age * (b.kind === "small" ? 0.22 : 0.3);
-          for (let k = 0; k < b.n; k++) {
-            const a = b.half ? (k / (b.n - 1)) * Math.PI : (k / b.n) * Math.PI * 2;
-            splatDye(
-              b.x + (Math.cos(a) * R) / asp,
-              b.y + Math.sin(a) * R,
-              inkAbsorption(k % 2 ? b.color : b.color2, 0.07),
-              0.12
-            );
-          }
-        }
-        return true;
-      });
-      if (fx.tezutsu) {
-        fx.tezutsu.t -= dt;
-        const tz = fx.tezutsu;
-        // sparks scattered along a short cone above the tube, falling back
-        for (let i = 0; i < 3; i++) {
-          const spread = rnd(-0.06, 0.06);
-          const h = Math.abs(rnd(0, 1) * rnd(0, 1)) * 0.3; // denser near the tube
-          splatDye(
-            tz.x + spread * (0.3 + h * 2.5),
-            0.05 + h,
-            inkAbsorption(Math.random() < 0.8 ? "#f2c14e" : "#f8e6a0", 0.1),
-            rnd(0.25, 0.5)
-          );
-        }
-        const a = Math.PI / 2 + rnd(-0.55, 0.55);
-        splatVelocity(tz.x, 0.08, Math.cos(a) * 110, Math.sin(a) * 110, 1.4);
-        if (tz.t <= 0) delete fx.tezutsu;
-      }
-    },
-
-    starry(now, dt) {
-      // moon and twinkling stars are drawn crisply in the display shader;
-      // the fluid adds thin night mists that drift across them, plus the
-      // occasional shooting star
-      fx.mist = (fx.mist ?? 0) - dt * 1000;
-      if (fx.mist <= 0) {
-        splatDye(Math.random(), rnd(0.45, 0.95), inkAbsorption(dark ? "#8d94a8" : "#9aa0b4", 0.05), rnd(5, 10));
-        fx.mist = rnd(700, 1400) * slow;
-      }
-      fx.list = fx.list || [];
-      fx.shoot = (fx.shoot ?? 4000) - dt * 1000;
-      if (fx.shoot <= 0) {
-        fx.list.push({ x: rnd(0.2, 0.9), y: rnd(0.8, 0.95), vx: -rnd(0.5, 0.8), vy: -rnd(0.15, 0.3), life: 0.7 });
-        fx.shoot = rnd(7000, 14000) * slow;
-      }
-      fx.list = fx.list.filter((s) => {
-        s.life -= dt;
-        s.x += s.vx * dt * 0.9;
-        s.y += s.vy * dt * 0.9;
-        if (s.life <= 0) return false;
-        splatDye(s.x, s.y, inkAbsorption(dark ? "#ffffff" : "#8a86c8", 0.12), 0.4);
-        splatVelocity(s.x, s.y, s.vx * 150, s.vy * 150, 1);
-        return true;
-      });
-      fx.drift = (fx.drift ?? 0) - dt * 1000;
-      if (fx.drift <= 0) {
-        splatVelocity(Math.random(), rnd(0.3, 0.9), rnd(-18, 18), rnd(-6, 6), 16);
-        fx.drift = rnd(900, 1600);
       }
     },
   };
@@ -1064,9 +748,6 @@ function createSim(mount) {
     step(dt);
 
     displayMat.uniforms.uDye.value = dye.read.texture;
-    displayMat.uniforms.uStarry.value = activeEffect() === "starry" ? 1 : 0;
-    displayMat.uniforms.uTime.value = now * 0.001;
-    displayMat.uniforms.uAspect.value = innerWidth / innerHeight;
     blit(displayMat, null);
   }
 
@@ -1121,9 +802,6 @@ function createSim(mount) {
     setEffect,
     getEffect: () => effect,
     effects: [...Object.keys(CHOREO), "random"],
-    forceHanabi: (t) => {
-      fx.forceType = t; // e.g. 'warimono' — call after setEffect('hanabi')
-    },
     // drive n frames manually (e.g. when rAF is suspended in hidden tabs)
     tick(n = 60) {
       for (let i = 0; i < n; i++) {

@@ -23,33 +23,19 @@ import {
   Star,
   Waves,
   Cloud,
-  Flame,
-  Orbit,
-  CircleDot,
-  Wind,
   Palette,
-  Rainbow,
   CloudRain,
   Shuffle,
-  PartyPopper,
-  MoonStar,
 } from "lucide-react";
 
 // ink choreography modes for the fluid background
 const BACKGROUND_EFFECTS = [
   { id: "suminagashi", name: "Suminagashi (墨流し)", icon: Droplets },
   { id: "aurora", name: "Aurora", icon: Sparkles },
-  { id: "hanabi", name: "Hanabi 花火 (Fireworks)", icon: PartyPopper },
-  { id: "starry", name: "Starry Night", icon: MoonStar },
   { id: "meteor", name: "Meteor", icon: Star },
   { id: "ocean", name: "Ocean Wave", icon: Waves },
   { id: "cloud", name: "Cloud", icon: Cloud },
-  { id: "fire", name: "Fire", icon: Flame },
-  { id: "galaxy", name: "Galaxy Spiral", icon: Orbit },
-  { id: "ripple", name: "Ripple", icon: CircleDot },
-  { id: "breathing", name: "Breathing", icon: Wind },
   { id: "rainbowCycle", name: "Rainbow Cycle", icon: Palette },
-  { id: "rainbowWave", name: "Rainbow Wave", icon: Rainbow },
   { id: "rain", name: "Rain", icon: CloudRain },
   { id: "random", name: "Random (auto-rotate)", icon: Shuffle },
 ];
