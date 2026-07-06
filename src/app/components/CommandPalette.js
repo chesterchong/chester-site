@@ -292,6 +292,14 @@ export default function CommandPalette() {
                   <span className="flex-1">Go to Writing</span>
                   <Shortcut isModifierPressed={isModifierPressed}>W</Shortcut>
                 </Command.Item>
+                <Command.Item
+                  value="editor write new post edit article"
+                  onSelect={() => runCommand(() => router.push("/editor"))}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-stone-600 dark:text-stone-400 rounded hover:bg-stone-500/10 dark:hover:bg-white/10 cursor-pointer data-[selected=true]:bg-stone-500/10 dark:data-[selected=true]:bg-white/10"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span className="flex-1">Open Editor</span>
+                </Command.Item>
               </Command.Group>
 
               <Command.Group

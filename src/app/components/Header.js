@@ -14,6 +14,7 @@ export default function Header({ className }) {
   const pathname = usePathname();
   const [isMac, setIsMac] = useState(false);
   const [showArrow, setShowArrow] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
   const isModifierPressed = useModifierKey();
   const isMobileDevice = useMobileDevice();
   const { theme, toggleTheme } = useTheme();
@@ -22,6 +23,8 @@ export default function Header({ className }) {
     setIsMac(navigator.platform.toLowerCase().includes('mac'));
     const hasOpenedPalette = localStorage.getItem('hasOpenedCommandPalette');
     setShowArrow(!hasOpenedPalette);
+    // editor nav item appears only once editor mode has been unlocked
+    setShowEditor(!!localStorage.getItem('editor-token'));
 
     // Listen for command palette opened event
     const handlePaletteOpened = () => setShowArrow(false);
@@ -53,7 +56,17 @@ export default function Header({ className }) {
       isActive: pathname.startsWith("/writing"),
       isNextLink: true,
     },
-  ], [pathname]);
+    ...(showEditor || pathname === "/editor"
+      ? [
+          {
+            name: "editor",
+            href: "/editor",
+            isActive: pathname === "/editor",
+            isNextLink: true,
+          },
+        ]
+      : []),
+  ], [pathname, showEditor]);
 
   return (
     <div className="flex justify-between items-center">
