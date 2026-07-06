@@ -424,9 +424,7 @@ function createSim(mount) {
   // per-effect fluid feel: how fast dye fades / how tight the vortices curl
   const EFFECT_PARAMS = {
     suminagashi: { dye: 0.035, curl: 24 },
-    aurora: { dye: 0.9, curl: 10 },
     meteor: { dye: 0.5, curl: 14 },
-    ocean: { dye: 0.75, curl: 10 },
     cloud: { dye: 0.4, curl: 4 },
     rainbowCycle: { dye: 0.06, curl: 24 },
     rain: { dye: 0.55, curl: 18 },
@@ -437,7 +435,7 @@ function createSim(mount) {
     const saved = localStorage.getItem("bg-effect");
     if (saved && (saved in EFFECT_PARAMS || saved === "random")) effect = saved;
   } catch {}
-  let randomCurrent = "aurora";
+  let randomCurrent = "meteor";
   let fx = {}; // per-effect scratch state, reset on every switch
 
   const activeEffect = () => (effect === "random" ? randomCurrent : effect);
@@ -491,22 +489,6 @@ function createSim(mount) {
       }
     },
 
-    aurora(now, dt) {
-      // waving curtains of green → teal → violet light in the upper sky
-      for (let c = 0; c < 3; c++) {
-        const x = Math.random();
-        const y = 0.84 - c * 0.06 + 0.06 * Math.sin(x * 7 + now * 0.0007 + c * 2.1);
-        const hue = 0.36 + 0.32 * x + 0.04 * c;
-        splatDye(x, y, inkAbsorption(hsl(hue, 0.85, dark ? 0.58 : 0.42), 0.011), rnd(1.2, 2.6));
-      }
-      fx.shim = (fx.shim ?? 0) - dt * 1000;
-      if (fx.shim <= 0) {
-        const x = Math.random();
-        splatVelocity(x, 0.7, Math.sin(now * 0.0005 + x * 9) * 50, rnd(30, 90), 8);
-        fx.shim = rnd(120, 320) * slow;
-      }
-    },
-
     meteor(now, dt) {
       fx.list = fx.list || [];
       fx.spawn = (fx.spawn ?? 600) - dt * 1000;
@@ -532,35 +514,6 @@ function createSim(mount) {
         splatVelocity(m.x, m.y, m.vx * 220, m.vy * 220, 1.6);
         return true;
       });
-    },
-
-    ocean(now, dt) {
-      // standing on the beach: deep water near the horizon (top), a swash
-      // front that rolls in toward the sand (bottom), pauses, and pulls out
-      const T = 8000;
-      const ph = (now % T) / T;
-      const tIn = 0.55; // fraction of the cycle spent coming in
-      const p = ph < tIn ? ph / tIn : 1 - (ph - tIn) / (1 - tIn);
-      const ease = p * p * (3 - 2 * p);
-      const frontY = 0.44 - 0.3 * ease; // 0.44 (out) → 0.14 (fully in)
-      const fy = ph < tIn ? -110 : 70; // water rushes down-shore, then back
-
-      // deep sea band
-      for (let i = 0; i < 2; i++) {
-        splatDye(Math.random(), rnd(0.72, 0.92), inkAbsorption(hsl(rnd(0.55, 0.6), 0.65, dark ? 0.5 : 0.35), 0.007), rnd(2, 4));
-      }
-      // foam at the leading edge, aqua body just behind it
-      for (let i = 0; i < 3; i++) {
-        const x = Math.random();
-        const y = frontY + 0.03 * Math.sin(x * 5 + now * 0.0004) + rnd(-0.01, 0.01);
-        splatDye(x, y, inkAbsorption(dark ? "#dff3f2" : "#78b8c4", 0.02), rnd(0.8, 1.6));
-        if (i === 0) splatDye(x, y + 0.07, inkAbsorption(hsl(0.53, 0.6, dark ? 0.55 : 0.42), 0.014), rnd(1.5, 3));
-      }
-      fx.push = (fx.push ?? 0) - dt * 1000;
-      if (fx.push <= 0) {
-        splatVelocity(Math.random(), frontY + 0.02, rnd(-25, 25), fy, 8);
-        fx.push = rnd(150, 350) * slow;
-      }
     },
 
     cloud(now, dt) {
@@ -797,7 +750,7 @@ function createSim(mount) {
   if (activeEffect() === "suminagashi") seed();
   raf = requestAnimationFrame(frame);
 
-  // console access: window.__sumi.setEffect('aurora'), .effects, .tick(n)
+  // console access: window.__sumi.setEffect('rain'), .effects, .tick(n)
   window.__sumi = {
     setEffect,
     getEffect: () => effect,

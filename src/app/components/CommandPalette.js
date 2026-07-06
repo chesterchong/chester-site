@@ -19,9 +19,7 @@ import {
   Sun,
   Moon,
   Droplets,
-  Sparkles,
   Star,
-  Waves,
   Cloud,
   Palette,
   CloudRain,
@@ -31,9 +29,7 @@ import {
 // ink choreography modes for the fluid background
 const BACKGROUND_EFFECTS = [
   { id: "suminagashi", name: "Suminagashi (墨流し)", icon: Droplets },
-  { id: "aurora", name: "Aurora", icon: Sparkles },
   { id: "meteor", name: "Meteor", icon: Star },
-  { id: "ocean", name: "Ocean Wave", icon: Waves },
   { id: "cloud", name: "Cloud", icon: Cloud },
   { id: "rainbowCycle", name: "Rainbow Cycle", icon: Palette },
   { id: "rain", name: "Rain", icon: CloudRain },
