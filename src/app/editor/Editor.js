@@ -236,6 +236,21 @@ export default function Editor() {
     }
   };
 
+  // paste or drop an image straight into the textarea while writing
+  const onPasteImage = (e) => {
+    const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
+    if (!item) return; // plain text pastes proceed as normal
+    e.preventDefault();
+    const file = item.getAsFile();
+    if (file) uploadImage(file);
+  };
+  const onDropImage = (e) => {
+    const file = [...(e.dataTransfer?.files || [])].find((f) => f.type.startsWith("image/"));
+    if (!file) return;
+    e.preventDefault();
+    uploadImage(file);
+  };
+
   /* token gate */
   if (token === null) {
     return (
@@ -336,7 +351,16 @@ export default function Editor() {
           <p className="text-xs">
             this post has a custom structure, so you are editing the raw MDX file.
           </p>
-          <textarea ref={bodyRef} rows={22} value={form.raw} onChange={set("raw")} className={`${inputCls} font-mono text-xs`} />
+          <textarea
+            ref={bodyRef}
+            rows={22}
+            value={form.raw}
+            onChange={set("raw")}
+            onPaste={onPasteImage}
+            onDrop={onDropImage}
+            onDragOver={(e) => e.preventDefault()}
+            className={`${inputCls} font-mono text-xs`}
+          />
         </>
       ) : (
         <>
@@ -357,9 +381,14 @@ export default function Editor() {
           <textarea
             ref={bodyRef}
             rows={18}
-            placeholder={"markdown body…\n\n## headings, **bold**, [links](https://…), code blocks all work"}
+            placeholder={
+              "markdown body…\n\n## headings, **bold**, [links](https://…), code blocks all work\npaste or drop an image anywhere to upload it right here"
+            }
             value={form.body}
             onChange={set("body")}
+            onPaste={onPasteImage}
+            onDrop={onDropImage}
+            onDragOver={(e) => e.preventDefault()}
             className={`${inputCls} font-mono text-xs leading-relaxed`}
           />
         </>
