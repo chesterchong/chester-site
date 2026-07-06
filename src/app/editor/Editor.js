@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { FileText, LogOut, Plus, ArrowLeft, ExternalLink } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FileText, LogOut, Plus, ArrowLeft, ExternalLink, ImagePlus } from "lucide-react";
 
 /*
   Editor mode: writes posts straight to the GitHub repo via the contents
@@ -98,6 +98,8 @@ export default function Editor() {
   const [view, setView] = useState("list"); // list | edit
   const [form, setForm] = useState(null); // { slug, sha, isNew, raw?, title, date, tags, description, body }
   const [status, setStatus] = useState("");
+  const bodyRef = useRef(null);
+  const fileRef = useRef(null);
 
   useEffect(() => {
     setToken(localStorage.getItem("editor-token"));
@@ -187,6 +189,50 @@ export default function Editor() {
       loadPosts();
     } catch (e) {
       setStatus(`save failed: ${e.message}`);
+    }
+  };
+
+  const uploadImage = async (file) => {
+    const slug = form.isNew ? slugify(form.slug || form.title) : form.slug;
+    if (!slug) {
+      setStatus("give the post a title first, then upload images");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setStatus("image too large (8 MB max) — resize it first");
+      return;
+    }
+    setStatus("uploading image…");
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let bin = "";
+      const CHUNK = 0x8000;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+      }
+      const clean = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
+      const name = `${Date.now().toString(36)}-${clean}`;
+      const path = `public/images/writing/${slug}/${name}`;
+      await gh(`/contents/${path}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          message: `Add image for post: ${slug}`,
+          content: btoa(bin),
+          branch: BRANCH,
+        }),
+      });
+      const md = `\n![${file.name.replace(/\.[^.]*$/, "")}](/images/writing/${slug}/${name})\n`;
+      // insert at the body cursor if we can, otherwise append
+      const ta = bodyRef.current;
+      setForm((f) => {
+        const text = f.raw !== undefined ? f.raw : f.body;
+        const pos = ta && document.activeElement !== null ? ta.selectionStart ?? text.length : text.length;
+        const next = text.slice(0, pos) + md + text.slice(pos);
+        return f.raw !== undefined ? { ...f, raw: next } : { ...f, body: next };
+      });
+      setStatus("image uploaded & inserted — it goes live with your next save");
+    } catch (e) {
+      setStatus(`image upload failed: ${e.message}`);
     }
   };
 
@@ -290,7 +336,7 @@ export default function Editor() {
           <p className="text-xs">
             this post has a custom structure, so you are editing the raw MDX file.
           </p>
-          <textarea rows={22} value={form.raw} onChange={set("raw")} className={`${inputCls} font-mono text-xs`} />
+          <textarea ref={bodyRef} rows={22} value={form.raw} onChange={set("raw")} className={`${inputCls} font-mono text-xs`} />
         </>
       ) : (
         <>
@@ -309,6 +355,7 @@ export default function Editor() {
           </div>
           <input placeholder="one-line description" value={form.description} onChange={set("description")} className={inputCls} />
           <textarea
+            ref={bodyRef}
             rows={18}
             placeholder={"markdown body…\n\n## headings, **bold**, [links](https://…), code blocks all work"}
             value={form.body}
@@ -318,11 +365,25 @@ export default function Editor() {
         </>
       )}
 
-      <div className="flex items-center gap-3">
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) uploadImage(f);
+          e.target.value = "";
+        }}
+      />
+      <div className="flex items-center gap-3 flex-wrap">
         <button className={btnCls} onClick={save}>
           save & publish
         </button>
-        <span className={status.startsWith("save failed") ? "text-red-600 dark:text-red-400" : ""}>{status}</span>
+        <button className={btnCls} onClick={() => fileRef.current?.click()}>
+          <ImagePlus className="w-4 h-4" /> photo
+        </button>
+        <span className={status.includes("failed") || status.includes("too large") ? "text-red-600 dark:text-red-400" : ""}>{status}</span>
       </div>
       <p className="text-xs text-stone-500">
         saving commits to GitHub; the site rebuilds automatically (~1 min). markdown is compiled as MDX —
