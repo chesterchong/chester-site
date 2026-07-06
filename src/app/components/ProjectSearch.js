@@ -4,22 +4,21 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import ProjectList from "./ProjectList";
 
-// TODO(Chester): add your projects here. For each project, drop a screenshot
-// in src/app/assets/projects/ (webp) or a demo video in public/videos/ and
-// reference it via `image` (imported) or `videoSrc` (public path).
-//
-// Example entry:
-// {
-//   title: "My Project",
-//   href: "https://myproject.com",
-//   description: "one-line description of what it does and why it's cool.",
-//   image: MyProjectImage, // or videoSrc: "/videos/myproject.mp4"
-//   imageAlt: "My Project",
-//   technologies: ["TypeScript", "Next.js"],
-//   github: "https://github.com/chesterchong/my-project",
-//   demo: "https://myproject.com",
-// },
-const projects = [];
+// For each project, drop a screenshot in src/app/assets/projects/ (webp,
+// imported as `image`) or a demo video in public/videos/ (`videoSrc`).
+const projects = [
+  {
+    title: "AI Quiz Wrapper",
+    href: "https://gamify-ai-learn.vercel.app/",
+    description:
+      "turns any material into a gamified quiz. from zero to live in < 1 day.",
+    videoSrc: "/videos/gamify-ai-learn.mp4",
+    imageAlt: "AI Quiz Wrapper",
+    technologies: ["Next.js", "Gemini"],
+    github: "https://github.com/chesterchong/gamify-ai-learn",
+    demo: "https://gamify-ai-learn.vercel.app/",
+  },
+];
 
 export default function ProjectSearch() {
   const [searchTerm, setSearchTerm] = useState("");
